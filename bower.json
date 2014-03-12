@@ -1,0 +1,12 @@
+{
+  "name": "morse-code",
+  "version": "0.0.0",
+  "description": "utility for learning to take notes on a smartphone without looking at the screen",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rasmuserik/morse-code.git"
+  },
+  "dependencies": {
+    "uutil": "~0.0.2"
+  }
+}

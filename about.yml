@@ -1,0 +1,7 @@
+name: morse-code
+title: Morse code learning and note taking
+desc: utility for learning to take notes on a smartphone without looking at the screen
+html:
+  js:
+    - bower_components/uutil/uutil.js
+bower: {}
