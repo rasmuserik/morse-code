@@ -281,9 +281,12 @@ registerTouch = ->
 #
 # timings:
 # - dot 1
-# - element pause 1
+# - element space 1
 # - dash 3
-# - letter pause 3
+# - letter space 3
+# - word space 7
+#
+# wpm = 2.4/dots-per-second
 #
 
 parseMorse = ->
