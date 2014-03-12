@@ -1,4 +1,11 @@
 # {{{1 Notes
+# {{{2 How exercises are choosen
+#
+# Start out practising one letter, then two letters, then three, etc. The order of the letters learned are given by their frequency in the dictionary of the language we are practicing.
+#
+# We want to practise whole words at a time, so we choose random words from a dictionary, such that each word only contains letters we already know, and words containing recently learned letters are more likely.
+#
+# {{{2 mindmap of application
 #
 # - learning / practise
 #   - write words / sequence of characters
@@ -36,6 +43,8 @@ onReady = (fn) ->
     process.nextTick fn
   else
     if document.readystate != "complete" then fn() else setTimeout (-> onReady fn), 17 
+# {{{1 utility
+uu.pick = (arr) -> arr[Math.random() * arr.length | 0]
 # {{{1 alphabet
 alphabet:
   a: ".-"
@@ -110,7 +119,69 @@ alphabet:
   "ż": "--..-"
 
 #{{{1 dictionaries
+dicts = {}
+randDict = (symbs) ->
+  for i in [0..999]
+    word = ""
+    for j in [0..Math.random() * 4 + 1]
+      word += uu.pick symbs
+    word
+
+genDicts = (cb) ->
+
+  readDict = (lang, fn) ->
+    uu.ajax "#{lang}words.txt", undefined, (err, result) ->
+      throw err if err
+      fn result.slice(0,-1).toLocaleLowerCase().split("\n").map (a)->a.trim()
+
+  handleCreatedWords = ->
+    for lang, dict of dicts
+      freq = {}
+      for word in dict.words
+        for letter in word
+          freq[letter] ?= 0
+          ++freq[letter]
+      letters = Object.keys freq
+      letters.sort (a,b) -> freq[b] - freq[a]
+      dict.letters = letters
+    cb? dicts
+
+
+  genCallback = uu.whenDone handleCreatedWords
+  for lang in ["en", "da"]
+    dicts[lang] = {}
+    readDict lang, ((lang, cb) -> (words) ->
+      dicts[lang].words = words
+      cb()
+    )(lang, genCallback())
+
+  dicts.num = {words: randDict "0123456789"}
+  dicts.symb = {words: randDict ".,?'!/()&:;=+-_\"$@"}
+
+  
+#{{{1 Choose exercise words
+
+exercise = (lang, n) ->
+  exerciseList = (lang, n, letterNo) ->
+    letters = dicts[lang].letters.slice(0, n)
+    letterDict = {}
+    for letter in letters
+      letterDict[letter] = true
+    reqLetter = letters[letterNo]
+    dicts[lang].words.filter (word) ->
+      hasReqLetter = false
+      for letter in word
+        return false if !letterDict[letter]
+        hasReqLetter = true if letter == reqLetter
+      return hasReqLetter
+  letterNo = n
+  letterNo = (n - Math.pow(Math.random(), 4) * n) | 0 while letterNo >= Math.min(n, dicts[lang].letters.length)
+  uu.pick exerciseList lang, n, letterNo
+
 #{{{1
 onReady ->
-  console.log "HERE"
-
+  genDicts (dicts) ->
+    console.log dicts
+    lang = "da"
+    for i in [2..30]
+      console.log dicts[lang].letters[i-1], (exercise lang, i for j in [1..20]).join " "
