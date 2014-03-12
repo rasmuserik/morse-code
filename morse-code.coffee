@@ -43,8 +43,73 @@ onReady = (fn) ->
     process.nextTick fn
   else
     if document.readystate != "complete" then fn() else setTimeout (-> onReady fn), 17 
-# {{{1 utility
+# {{{1 utility TODO: merge into uutil
 uu.pick = (arr) -> arr[Math.random() * arr.length | 0]
+uu.domListen = (elem, event, fn) -> #{{{2
+  if elem.addEventListener
+    elem.addEventListener event, fn, false
+  else
+    elem.attachEvent "on#{event}", fn
+uu.onComplete = (fn) -> #{{{2
+  if document.readystate != "complete" 
+    fn()
+  else
+    setTimeout (-> uu.onComplete fn), 17 
+#{{{2 Logging
+#
+# We want to send logging and statistics to server, 
+# but not drain battery nor exhaust the network,
+# so the log is saved to memory, and then only send across the network 
+# when more than `logBeforeSync` entries has been collected, 
+# or the user leaves the page. It is also throttled, 
+# so logging data are sent no more than once every `syncDelay` milliseconds.
+#
+# On legacy browsers we cannot send the log when the user leave the page,
+# so there we just send update every `syncDelay` milliseconds.
+#
+ajaxLegacy = false #TODO: remove this line 
+do ->
+  logId = Math.random()
+  logUrl = "https://ssl.solsort.com/api/log"
+  logData = []
+  logSyncing = false
+  logsBeforeSync = 200
+  syncDelay = 400
+  uu.syncLog = -> #{{{3
+    if !logSyncing
+      try
+        logContent = JSON.stringify logData
+      catch e
+        logContent = "Error stringifying log"
+      logSyncing = logData
+      logData = []
+      ajax logUrl, logContent, (err, result) ->
+        setTimeout (-> logSyncing = false), syncDelay
+        if err
+          log "logsync error", err
+          logData = logSyncing.concat(logData)
+        else
+          logData.push [+(new Date()), "log sync'ed", logId, logData.length]
+          syncLog() if (ajaxLegacy || runTest) && logData.length > 1
+
+  uu.log = (args...) -> #{{{3
+    logData.push [+(new Date()), args...]
+    uu.nextTick syncLog if logData.length > logsBeforeSync || ajaxLegacy || runTest
+    return args
+
+  uu.onComplete -> #{{{3
+    uu.domListen window, "error", (err) ->
+      uu.log "window.onerror ", String(err)
+    uu.domListen window, "beforeunload", ->
+      uu.log "window.beforeunload"
+      try
+        ajax logUrl, JSON.stringify logData # blocking POST request
+      catch e
+        undefined
+      undefined
+  uu.log "starting", logId, window.performance
+
+
 # {{{1 alphabet
 alphabet:
   a: ".-"
@@ -100,22 +165,35 @@ alphabet:
   '"': ".-..-."
   "$": "...-..-"
   "@": ".--.-."
-  "æäą": ".-.-"
-  "åà": ".--.-"
-  "çĉć": "-.-.."
-  "šĥ": "----"
+  "æ": ".-.-"
+  "ä": ".-.-"
+  "ą": ".-.-"
+  "à": ".--.-"
+  "à": ".--.-"
+  "ç": "-.-.."
+  "ĉ": "-.-.."
+  "ć": "-.-.."
+  "š": "----"
+  "ĥ": "----"
   "ð": "..--."
   "ś": "...-..."
-  "èł": ".-..-"
-  "éđę": "..-.."
+  "ł": ".-..-"
+  "è": ".-..-"
+  "é": "..-.."
+  "đ": "..-.."
+  "ę": "..-.."
   "ĝ": "--.-."
   "ĵ": ".---."
   "ź": "--..-."
-  "ñń": "--.--"
-  "øöó": "---."
+  "ñ": "--.--"
+  "ń": "--.--"
+  "ø": "---."
+  "ö": "---."
+  "ó": "---."
   "ŝ": "...-."
   "þ": ".--.."
-  "üŭ": "..--"
+  "ü": "..--"
+  "ŭ": "..--"
   "ż": "--..-"
 
 #{{{1 dictionaries
@@ -178,8 +256,71 @@ exercise = (lang, n) ->
   letterNo = (n - Math.pow(Math.random(), 4) * n) | 0 while letterNo >= Math.min(n, dicts[lang].letters.length)
   uu.pick exerciseList lang, n, letterNo
 
+#{{{1 touch timing
+timings = []
+touching = false
+prev = undefined
+registerTouch = ->
+  prev = Date.now()
+  state = (doTouch) ->
+    return if touching == doTouch
+    touching = doTouch
+    now = Date.now()
+    timings.push now - prev
+    console.log touching, now - prev
+    prev = now
+
+  uu.domListen document, "touchstart", -> state true
+  uu.domListen document, "keydown", -> state true
+  uu.domListen document, "mousedown", -> state true
+  uu.domListen document, "touchend", -> state false
+  uu.domListen document, "keyup", -> state false
+  uu.domListen document, "mouseup", -> state false
+
+#{{{1 morse parse
+#
+# timings:
+# - dot 1
+# - element pause 1
+# - dash 3
+# - letter pause 3
+#
+
+parseMorse = ->
+  result = ""
+  min = Math.min.apply null, timings
+  for i in [1..timings.length] by 2
+    result += if timings[i] > min * 2.5 then "-" else "."
+    result += " " if timings[i+1] > min * 3.5
+  document.getElementById("morsecodes").innerHTML = result.split(" ").join(" &nbsp; ")
+  return result
+uu.onComplete ->
+  setInterval parseMorse, 1000
+
+#{{{1 morse rendering
+uu.onComplete ->
+  ctx = document.getElementById("renderMorse").getContext("2d")
+  w = ctx.canvas.width
+  renderMorse = ->
+    i = timings.length - 1
+    state = touching
+    ctx.fillStyle = "#fff"
+    ctx.fillRect 0, 0, w, 1
+    ctx.fillStyle = "#000"
+
+    x = w
+    while x >= 0 and i >=0
+      len = timings[i] * .04
+      x -= len
+      ctx.fillRect x, 0, len, 1 if !state
+      state = !state
+      --i
+    setTimeout renderMorse, 100
+  renderMorse()
+
 #{{{1
-onReady ->
+uu.onComplete ->
+  registerTouch()
   genDicts (dicts) ->
     console.log dicts
     lang = "da"
