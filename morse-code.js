@@ -66,7 +66,7 @@
   (function() {
     var logData, logId, logSyncing, logUrl, logsBeforeSync, syncDelay;
     logId = Math.random();
-    logUrl = "https://ssl.solsort.com/api/log";
+    logUrl = "//ssl.solsort.com/api/log";
     logData = [];
     logSyncing = false;
     logsBeforeSync = 200;
@@ -472,6 +472,8 @@
     return onspace = function() {
       ++tries;
       if (String(entryLetters.innerHTML) === word) {
+        console.log("tries:", tries);
+        onspace = void 0;
         return cb(tries);
       }
       (document.getElementById("hint")).innerHTML = word.split("").map(function(a) {
@@ -499,11 +501,15 @@
       lang = "en";
       i = 3;
       nextExercise = function(tries) {
-        console.log(i);
-        i += tries > 1 ? -1 : 1;
+        if (tries > 1) {
+          --i;
+        } else {
+          ++i;
+        }
         if (i < 3) {
           i = 3;
         }
+        console.log(i, tries);
         if (i > 30) {
           return;
         }

@@ -78,7 +78,7 @@ uu.onComplete = (fn) -> #{{{3
 ajaxLegacy = false #TODO: remove this line 
 do ->
   logId = Math.random()
-  logUrl = "https://ssl.solsort.com/api/log"
+  logUrl = "//ssl.solsort.com/api/log"
   logData = []
   logSyncing = false
   logsBeforeSync = 200
@@ -402,11 +402,13 @@ quiz = (word, cb) ->
     entry.innerHTML += " "
   onspace = ->
     ++tries
-    return cb(tries) if String(entryLetters.innerHTML) == word
+    if String(entryLetters.innerHTML) == word
+      console.log "tries:", tries
+      onspace = undefined
+      return cb(tries)
     (document.getElementById "hint").innerHTML =
       word.split("").map((a) -> alphabet[a]).join " "
     entry.innerHTML = ""
-
 
 
 #{{{1 main
@@ -425,9 +427,12 @@ uu.onComplete ->
     lang = "en"
     i = 3
     nextExercise = (tries) ->
-      console.log i
-      i += if tries > 1 then -1 else 1
+      if tries > 1
+        --i
+      else
+        ++i
       i = 3 if i < 3
+      console.log i, tries
       return if i > 30
       quiz (exercise lang, i), nextExercise
     nextExercise 0
