@@ -1,11 +1,18 @@
-# {{{1 Notes
-# {{{2 How exercises are choosen
+#{{{1 Notes
+#{{{2 How exercises are choosen
 #
 # Start out practising one letter, then two letters, then three, etc. The order of the letters learned are given by their frequency in the dictionary of the language we are practicing.
 #
 # We want to practise whole words at a time, so we choose random words from a dictionary, such that each word only contains letters we already know, and words containing recently learned letters are more likely.
 #
-# {{{2 mindmap of application
+#{{{2 Roadmap
+#
+#{{{3 version 0.1.0
+#
+# - exercise english morse code
+# - write performance to log
+#
+#{{{3 mindmap of end application
 #
 # - learning / practise
 #   - write words / sequence of characters
@@ -43,14 +50,15 @@ onReady = (fn) ->
     process.nextTick fn
   else
     if document.readystate != "complete" then fn() else setTimeout (-> onReady fn), 17 
-# {{{1 utility TODO: merge into uutil
+#{{{1 utility TODO: merge into uutil
+#{{{2 General
 uu.pick = (arr) -> arr[Math.random() * arr.length | 0]
-uu.domListen = (elem, event, fn) -> #{{{2
+uu.domListen = (elem, event, fn) -> #{{{3
   if elem.addEventListener
     elem.addEventListener event, fn, false
   else
     elem.attachEvent "on#{event}", fn
-uu.onComplete = (fn) -> #{{{2
+uu.onComplete = (fn) -> #{{{3
   if document.readystate != "complete" 
     fn()
   else
@@ -110,7 +118,11 @@ do ->
   uu.log "starting", logId, window.performance
 
 
-# {{{1 alphabet
+#{{{1 Data
+exercise = undefined
+genDicts = undefined
+alphabet = undefined
+#{{{2 morse alphabet
 alphabet:
   a: ".-"
   b: "-..."
@@ -196,67 +208,76 @@ alphabet:
   "ŭ": "..--"
   "ż": "--..-"
 
-#{{{1 dictionaries
-dicts = {}
-randDict = (symbs) ->
-  for i in [0..999]
-    word = ""
-    for j in [0..Math.random() * 4 + 1]
-      word += uu.pick symbs
-    word
-
-genDicts = (cb) ->
-
-  readDict = (lang, fn) ->
-    uu.ajax "#{lang}words.txt", undefined, (err, result) ->
-      throw err if err
-      fn result.slice(0,-1).toLocaleLowerCase().split("\n").map (a)->a.trim()
-
-  handleCreatedWords = ->
-    for lang, dict of dicts
-      freq = {}
-      for word in dict.words
-        for letter in word
-          freq[letter] ?= 0
-          ++freq[letter]
-      letters = Object.keys freq
-      letters.sort (a,b) -> freq[b] - freq[a]
-      dict.letters = letters
-    cb? dicts
-
-
-  genCallback = uu.whenDone handleCreatedWords
-  for lang in ["en", "da"]
-    dicts[lang] = {}
-    readDict lang, ((lang, cb) -> (words) ->
-      dicts[lang].words = words
-      cb()
-    )(lang, genCallback())
-
-  dicts.num = {words: randDict "0123456789"}
-  dicts.symb = {words: randDict ".,?'!/()&:;=+-_\"$@"}
-
+#{{{2 Exercises / languages and choices of words for practise
+do ->
+  dicts = {}
+  randDict = (symbs) -> #{{{3
+    for i in [0..999]
+      word = ""
+      for j in [0..Math.random() * 4 + 1]
+        word += uu.pick symbs
+      word
   
-#{{{1 Choose exercise words
-
-exercise = (lang, n) ->
-  exerciseList = (lang, n, letterNo) ->
-    letters = dicts[lang].letters.slice(0, n)
-    letterDict = {}
-    for letter in letters
-      letterDict[letter] = true
-    reqLetter = letters[letterNo]
-    dicts[lang].words.filter (word) ->
-      hasReqLetter = false
-      for letter in word
-        return false if !letterDict[letter]
-        hasReqLetter = true if letter == reqLetter
-      return hasReqLetter
-  letterNo = n
-  letterNo = (n - Math.pow(Math.random(), 4) * n) | 0 while letterNo >= Math.min(n, dicts[lang].letters.length)
-  uu.pick exerciseList lang, n, letterNo
-
-#{{{1 touch timing
+  genDicts = (cb) -> #{{{3
+  
+    readDict = (lang, fn) ->
+      uu.ajax "#{lang}words.txt", undefined, (err, result) ->
+        throw err if err
+        fn result.slice(0,-1).toLocaleLowerCase().split("\n").map (a)->a.trim()
+  
+    handleCreatedWords = ->
+      for lang, dict of dicts
+        freq = {}
+        for word in dict.words
+          for letter in word
+            freq[letter] ?= 0
+            ++freq[letter]
+        letters = Object.keys freq
+        letters.sort (a,b) -> freq[b] - freq[a]
+        dict.letters = letters
+      cb? dicts
+  
+  
+    genCallback = uu.whenDone handleCreatedWords
+    for lang in ["en", "da"]
+      dicts[lang] = {}
+      readDict lang, ((lang, cb) -> (words) ->
+        dicts[lang].words = words
+        cb()
+      )(lang, genCallback())
+  
+    dicts.num = {words: randDict "0123456789"}
+    dicts.symb = {words: randDict ".,?'!/()&:;=+-_\"$@"}
+  
+  exercise = (lang, n) -> #{{{3
+    exerciseList = (lang, n, letterNo) ->
+      letters = dicts[lang].letters.slice(0, n)
+      letterDict = {}
+      for letter in letters
+        letterDict[letter] = true
+      reqLetter = letters[letterNo]
+      dicts[lang].words.filter (word) ->
+        hasReqLetter = false
+        for letter in word
+          return false if !letterDict[letter]
+          hasReqLetter = true if letter == reqLetter
+        return hasReqLetter
+    letterNo = n
+    letterNo = (n - Math.pow(Math.random(), 4) * n) | 0 while letterNo >= Math.min(n, dicts[lang].letters.length)
+    uu.pick exerciseList lang, n, letterNo
+  
+#{{{1 morse parse
+#
+# timings:
+# - dot 1
+# - element space 1
+# - dash 3
+# - letter space 3
+# - word space 7
+#
+# wpm = 2.4/dots-per-second
+#
+#{{{2 touch timing
 timings = []
 touching = false
 prev = undefined
@@ -277,31 +298,22 @@ registerTouch = ->
   uu.domListen document, "keyup", -> state false
   uu.domListen document, "mouseup", -> state false
 
-#{{{1 morse parse
-#
-# timings:
-# - dot 1
-# - element space 1
-# - dash 3
-# - letter space 3
-# - word space 7
-#
-# wpm = 2.4/dots-per-second
-#
+#{{{2 interprete as morse characters
 
 parseMorse = ->
   result = ""
-  min = Math.min.apply null, timings
+  min = Math.max 30, Math.min.apply null, timings
   for i in [1..timings.length] by 2
     result += if timings[i] > min * 2.5 then "-" else "."
     result += " " if timings[i+1] > min * 3.5
   document.getElementById("morsecodes").innerHTML = result.split(" ").join(" &nbsp; ")
   return result
+
 uu.onComplete ->
   setInterval parseMorse, 1000
 
-#{{{1 morse rendering
-uu.onComplete ->
+#{{{2 visualise morse code
+renderMorse = ->
   ctx = document.getElementById("renderMorse").getContext("2d")
   w = ctx.canvas.width
   renderMorse = ->
@@ -321,8 +333,17 @@ uu.onComplete ->
     setTimeout renderMorse, 100
   renderMorse()
 
-#{{{1
+#{{{1 main
 uu.onComplete ->
+  document.body.innerHTML = jsonml2html.toString ["div"
+    ["canvas#renderMorse"
+        width: 800
+        height: 1
+        style: {width: "80%", height: 20}
+      ""]
+    ["div#morsecodes", ""]
+  ]
+  renderMorse()
   registerTouch()
   genDicts (dicts) ->
     console.log dicts
