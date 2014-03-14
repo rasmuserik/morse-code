@@ -91,18 +91,18 @@ do ->
         logContent = "Error stringifying log"
       logSyncing = logData
       logData = []
-      ajax logUrl, logContent, (err, result) ->
+      uu.ajax logUrl, logContent, (err, result) ->
         setTimeout (-> logSyncing = false), syncDelay
         if err
           log "logsync error", err
           logData = logSyncing.concat(logData)
         else
           logData.push [+(new Date()), "log sync'ed", logId, logData.length]
-          syncLog() if (ajaxLegacy || runTest) && logData.length > 1
+          uu.syncLog() if (ajaxLegacy || runTest) && logData.length > 1
 
   uu.log = (args...) -> #{{{3
     logData.push [+(new Date()), args...]
-    uu.nextTick syncLog if logData.length > logsBeforeSync || ajaxLegacy || runTest
+    uu.nextTick uu.syncLog if logData.length > logsBeforeSync || ajaxLegacy || runTest
     return args
 
   uu.onComplete -> #{{{3
@@ -111,7 +111,7 @@ do ->
     uu.domListen window, "beforeunload", ->
       uu.log "window.beforeunload"
       try
-        ajax logUrl, JSON.stringify logData # blocking POST request
+        uu.ajax logUrl, JSON.stringify logData # blocking POST request
       catch e
         undefined
       undefined
@@ -123,7 +123,7 @@ exercise = undefined
 genDicts = undefined
 alphabet = undefined
 #{{{2 morse alphabet
-alphabet:
+alphabet =
   a: ".-"
   b: "-..."
   c: "-.-."
@@ -131,8 +131,9 @@ alphabet:
   e: "."
   f: "..-."
   g: "--."
+  i: ".."
   h: "...."
-  j: "--."
+  j: ".---"
   k: "-.-"
   l: ".-.."
   m: "--"
@@ -250,6 +251,8 @@ do ->
     dicts.symb = {words: randDict ".,?'!/()&:;=+-_\"$@"}
   
   exercise = (lang, n) -> #{{{3
+    uu.log "morse exercise", lang, n
+    n = n|0
     exerciseList = (lang, n, letterNo) ->
       letters = dicts[lang].letters.slice(0, n)
       letterDict = {}
@@ -277,6 +280,49 @@ do ->
 #
 # wpm = 2.4/dots-per-second
 #
+#
+# click<100ms: dot
+# click>100ms: dash
+# pause<150ms: element space
+# 150ms<pause<400ms letter-space
+# pause>400ms: space
+
+ondot = ondash = onletter = onspace = undefined
+uu.onComplete ->
+  dashTime = 120
+  letterTime = 180
+  spaceTime = 400
+
+  time = Date.now()
+
+  code = ""
+  ondot = -> code += "."
+  ondash = -> code += "-"
+  onletter = -> code += " "
+  onspace = ->
+    code = ""
+
+
+  touchStart = ->
+    now = time = Date.now()
+    uu.log "morsestart", now, dashTime
+    setTimeout (-> if time == now then ondash() else ondot()), dashTime
+
+  touchEnd = ->
+    now = time = Date.now()
+    uu.log "morseend", now, letterTime, spaceTime
+    setTimeout (-> onletter() if time == now), letterTime
+    setTimeout (-> onspace() if time == now), spaceTime
+
+
+  uu.domListen document, "touchstart", touchStart
+  uu.domListen document, "keydown", touchStart
+  uu.domListen document, "mousedown", touchStart
+  uu.domListen document, "touchend", touchEnd
+  uu.domListen document, "keyup", touchEnd
+  uu.domListen document, "mouseup", touchEnd
+
+###
 #{{{2 touch timing
 timings = []
 touching = false
@@ -332,6 +378,36 @@ renderMorse = ->
       --i
     setTimeout renderMorse, 100
   renderMorse()
+###
+#{{{1 quiz
+quiz = (word, cb) ->
+  uu.log "morsequiz", word
+  tries = 0
+  document.body.innerHTML = jsonml2html.toString ["div"
+    ["h2", word]
+    ["div#hint", ""]
+    ["div#entry", ""]
+    ["div#entryLetters", ""]]
+  tries = 0
+  entry = (document.getElementById "entry")
+  entryLetters = (document.getElementById "entryLetters")
+  ondot = -> entry.innerHTML += "."
+  ondash = -> entry.innerHTML += "-"
+  onletter = ->
+    letters = String(entry.innerHTML).split(" ").map (morse) ->
+      for symb, code of alphabet
+        return symb if morse == code
+      return morse
+    entryLetters.innerHTML = letters.join ""
+    entry.innerHTML += " "
+  onspace = ->
+    ++tries
+    return cb(tries) if String(entryLetters.innerHTML) == word
+    (document.getElementById "hint").innerHTML =
+      word.split("").map((a) -> alphabet[a]).join " "
+    entry.innerHTML = ""
+
+
 
 #{{{1 main
 uu.onComplete ->
@@ -343,10 +419,15 @@ uu.onComplete ->
       ""]
     ["div#morsecodes", ""]
   ]
-  renderMorse()
-  registerTouch()
+  #renderMorse()
+  #registerTouch()
   genDicts (dicts) ->
-    console.log dicts
-    lang = "da"
-    for i in [2..30]
-      console.log dicts[lang].letters[i-1], (exercise lang, i for j in [1..20]).join " "
+    lang = "en"
+    i = 3
+    nextExercise = (tries) ->
+      console.log i
+      i += if tries > 1 then -1 else 1
+      i = 3 if i < 3
+      return if i > 30
+      quiz (exercise lang, i), nextExercise
+    nextExercise 0
