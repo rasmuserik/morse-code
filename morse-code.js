@@ -329,9 +329,9 @@
 
   uu.onComplete(function() {
     var code, dashTime, letterTime, spaceTime, time, touchEnd, touchStart;
-    dashTime = 120;
-    letterTime = 180;
-    spaceTime = 400;
+    dashTime = 200;
+    letterTime = 330;
+    spaceTime = 800;
     time = Date.now();
     code = "";
     ondot = function() {
@@ -346,20 +346,23 @@
     onspace = function() {
       return code = "";
     };
-    touchStart = function() {
+    touchStart = function(e) {
       var now;
+      e.preventDefault();
       now = time = Date.now();
       uu.log("morsestart", now, dashTime);
-      return setTimeout((function() {
+      setTimeout((function() {
         if (time === now) {
           return ondash();
         } else {
           return ondot();
         }
       }), dashTime);
+      return false;
     };
-    touchEnd = function() {
+    touchEnd = function(e) {
       var now;
+      e.preventDefault();
       now = time = Date.now();
       uu.log("morseend", now, letterTime, spaceTime);
       setTimeout((function() {
@@ -367,18 +370,22 @@
           return onletter();
         }
       }), letterTime);
-      return setTimeout((function() {
+      setTimeout((function() {
         if (time === now) {
           return onspace();
         }
       }), spaceTime);
+      return false;
     };
-    uu.domListen(document, "touchstart", touchStart);
     uu.domListen(document, "keydown", touchStart);
-    uu.domListen(document, "mousedown", touchStart);
-    uu.domListen(document, "touchend", touchEnd);
     uu.domListen(document, "keyup", touchEnd);
-    return uu.domListen(document, "mouseup", touchEnd);
+    if (typeof document.ontouchstart !== "undefined") {
+      uu.domListen(document, "touchstart", touchStart);
+      return uu.domListen(document, "touchend", touchEnd);
+    } else {
+      uu.domListen(document, "mousedown", touchStart);
+      return uu.domListen(document, "mouseup", touchEnd);
+    }
   });
 
   /*

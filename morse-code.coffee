@@ -289,9 +289,9 @@ do ->
 
 ondot = ondash = onletter = onspace = undefined
 uu.onComplete ->
-  dashTime = 120
-  letterTime = 180
-  spaceTime = 400
+  dashTime = 200
+  letterTime = 330
+  spaceTime = 800
 
   time = Date.now()
 
@@ -303,24 +303,30 @@ uu.onComplete ->
     code = ""
 
 
-  touchStart = ->
+  touchStart = (e) ->
+    e.preventDefault()
     now = time = Date.now()
     uu.log "morsestart", now, dashTime
     setTimeout (-> if time == now then ondash() else ondot()), dashTime
+    false
 
-  touchEnd = ->
+  touchEnd = (e) ->
+    e.preventDefault()
     now = time = Date.now()
     uu.log "morseend", now, letterTime, spaceTime
     setTimeout (-> onletter() if time == now), letterTime
     setTimeout (-> onspace() if time == now), spaceTime
+    false
 
 
-  uu.domListen document, "touchstart", touchStart
   uu.domListen document, "keydown", touchStart
-  uu.domListen document, "mousedown", touchStart
-  uu.domListen document, "touchend", touchEnd
   uu.domListen document, "keyup", touchEnd
-  uu.domListen document, "mouseup", touchEnd
+  if typeof document.ontouchstart != "undefined"
+    uu.domListen document, "touchstart", touchStart
+    uu.domListen document, "touchend", touchEnd
+  else
+    uu.domListen document, "mousedown", touchStart
+    uu.domListen document, "mouseup", touchEnd
 
 ###
 #{{{2 touch timing
