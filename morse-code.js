@@ -453,7 +453,7 @@
 
   quiz = function() {
     var addEntry, entry, entryLetters, resetEntry, tries, unit, word;
-    word = exercise(lang, level + 2);
+    word = exercise(lang, level);
     uu.log("morsequiz", level, word);
     tries = 0;
     unit = Math.min(window.innerWidth, window.innerHeight) / 10;
@@ -477,7 +477,13 @@
             fontSize: unit * 2
           }
         }, word
-      ], ["div#entry", ""], ["div#entryLetters", ""]
+      ], [
+        "div#entry", {
+          style: {
+            fontSize: unit * 1.5
+          }
+        }, ""
+      ], ["div#entryLetters", ""]
     ]);
     tries = 0;
     entry = document.getElementById("entry");
@@ -529,8 +535,7 @@
       entry.innerHTML = jsonml2html.toString([
         "div", {
           style: {
-            color: "#040",
-            fontSize: unit
+            color: "#040"
           }
         }, word.split("").map(function(a) {
           return alphabet[a];

@@ -389,7 +389,7 @@ renderMorse = ->
 level = 1
 lang = "en"
 quiz = ->
-  word = exercise lang, level + 2
+  word = exercise lang, level
   uu.log "morsequiz", level, word
   tries = 0
   unit = Math.min(window.innerWidth, window.innerHeight) / 10
@@ -407,7 +407,10 @@ quiz = ->
         style:
           fontSize: unit*2
       word]
-    ["div#entry", ""]
+    ["div#entry",
+        style:
+          fontSize: unit*1.5
+      ""]
     ["div#entryLetters", ""]
   ]
   tries = 0
@@ -443,7 +446,6 @@ quiz = ->
     entry.innerHTML = jsonml2html.toString ["div"
         style:
           color: "#040"
-          fontSize: unit
       word.split("").map((a) -> alphabet[a]).join " "]
     resetEntry = true
 
