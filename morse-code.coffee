@@ -386,35 +386,66 @@ renderMorse = ->
   renderMorse()
 ###
 #{{{1 quiz
-quiz = (word, cb) ->
-  uu.log "morsequiz", word
+level = 1
+lang = "en"
+quiz = ->
+  word = exercise lang, level + 2
+  uu.log "morsequiz", level, word
   tries = 0
+  unit = Math.min(window.innerWidth, window.innerHeight) / 10
   document.body.innerHTML = jsonml2html.toString ["div"
-    ["h2", word]
-    ["div#hint", ""]
+      style:
+        fontFamily: "sans-serif"
+        textAlign: "center"
+        fontSize: unit
+    ["div",
+        style:
+          fontSize: unit*.8
+          margin: unit*.5
+      "level: ", level]
+    ["div",
+        style:
+          fontSize: unit*2
+      word]
     ["div#entry", ""]
-    ["div#entryLetters", ""]]
+    ["div#entryLetters", ""]
+  ]
   tries = 0
   entry = (document.getElementById "entry")
   entryLetters = (document.getElementById "entryLetters")
-  ondot = -> entry.innerHTML += "."
-  ondash = -> entry.innerHTML += "-"
+  resetEntry = false
+  addEntry = (str) ->
+    if resetEntry
+      entry.innerHTML = ""
+      resetEntry = false
+    entry.innerHTML += str
+  ondot = -> addEntry "."
+  ondash = -> addEntry "-"
   onletter = ->
     letters = String(entry.innerHTML).split(" ").map (morse) ->
       for symb, code of alphabet
         return symb if morse == code
       return morse
     entryLetters.innerHTML = letters.join ""
-    entry.innerHTML += " "
+    addEntry " "
   onspace = ->
     ++tries
     if String(entryLetters.innerHTML) == word
-      console.log "tries:", tries
-      onspace = undefined
-      return cb(tries)
-    (document.getElementById "hint").innerHTML =
-      word.split("").map((a) -> alphabet[a]).join " "
-    entry.innerHTML = ""
+      level += Math.max(2 - tries, -1)
+      level = Math.max(level, 1)
+      return uu.nextTick quiz
+    entryLetters.innerHTML = jsonml2html.toString ["div"
+        style:
+          color: "#800"
+          fontSize: unit * .5
+      ["div", entry.innerHTML]
+      ["div", entryLetters.innerHTML]]
+    entry.innerHTML = jsonml2html.toString ["div"
+        style:
+          color: "#040"
+          fontSize: unit
+      word.split("").map((a) -> alphabet[a]).join " "]
+    resetEntry = true
 
 
 #{{{1 main
@@ -429,16 +460,4 @@ uu.onComplete ->
   ]
   #renderMorse()
   #registerTouch()
-  genDicts (dicts) ->
-    lang = "en"
-    i = 3
-    nextExercise = (tries) ->
-      if tries > 1
-        --i
-      else
-        ++i
-      i = 3 if i < 3
-      console.log i, tries
-      return if i > 30
-      quiz (exercise lang, i), nextExercise
-    nextExercise 0
+  genDicts (dicts) -> quiz()
