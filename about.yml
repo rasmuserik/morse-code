@@ -6,3 +6,4 @@ html:
     - bower_components/uutil/uutil.js
     - bower_components/jsonml2html/jsonml2html.min.js
 bower: {}
+phonegap: {}  

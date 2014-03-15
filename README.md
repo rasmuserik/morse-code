@@ -129,6 +129,7 @@ so there we just send update every `syncDelay` milliseconds.
             undefined
           undefined
       uu.log "starting", logId, window.performance
+      uu.log "userAgent", navigator.userAgent
     
     
 
@@ -436,7 +437,10 @@ pause>400ms: space
             style:
               fontSize: unit*2
           word]
-        ["div#entry", ""]
+        ["div#entry",
+            style:
+              fontSize: unit*1.5
+          ""]
         ["div#entryLetters", ""]
       ]
       tries = 0
@@ -472,7 +476,6 @@ pause>400ms: space
         entry.innerHTML = jsonml2html.toString ["div"
             style:
               color: "#040"
-              fontSize: unit
           word.split("").map((a) -> alphabet[a]).join " "]
         resetEntry = true
     

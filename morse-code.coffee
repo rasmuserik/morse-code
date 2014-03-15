@@ -116,6 +116,7 @@ do ->
         undefined
       undefined
   uu.log "starting", logId, window.performance
+  uu.log "userAgent", navigator.userAgent
 
 
 #{{{1 Data

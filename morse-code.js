@@ -123,7 +123,8 @@
         return void 0;
       });
     });
-    return uu.log("starting", logId, window.performance);
+    uu.log("starting", logId, window.performance);
+    return uu.log("userAgent", navigator.userAgent);
   })();
 
   exercise = void 0;
